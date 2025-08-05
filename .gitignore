@@ -1,4 +1,22 @@
-.venv/
+# === Python-specific ===
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.log
+
+# === Virtual environments ===
+.venv/
+env/
+venv/
+
+# === PyCharm-specific ===
+.idea/
+
+# === Mac system files ===
 .DS_Store
+
+# === OS system files ===
+Thumbs.db
+ehthumbs.db
