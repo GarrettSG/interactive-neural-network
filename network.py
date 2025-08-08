@@ -10,11 +10,9 @@ from tensorflow.keras import layers, models
 x_train = x_train / 255.0
 x_test = x_test / 255.0
 
-# Reshape for CNN (batch, height, width, channels)
 x_train = x_train.reshape(-1, 28, 28, 1)
 x_test = x_test.reshape(-1, 28, 28, 1)
 
-# Define a CNN model
 def create_model():
     model = models.Sequential([
         layers.Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)),
@@ -30,19 +28,15 @@ def create_model():
                   metrics=['accuracy'])
     return model
 
-# Train model
 model = create_model()
 model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
 model.save('guess.keras')
 
-# Evaluate model
 loss, accuracy = model.evaluate(x_test, y_test)
 print(f"Test loss: {loss:.4f}, Test accuracy: {accuracy:.4f}")
 
-# Reload model
 model = tf.keras.models.load_model('guess.keras')
 
-# Predict on custom images
 def preprocess_image(path):
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     if img is None:
