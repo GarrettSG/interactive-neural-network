@@ -1,8 +1,5 @@
-import os
-import cv2
-import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
+import tensorflowjs as tfjs
 from tensorflow.keras import layers, models
 
 # Load and normalize MNIST data
@@ -10,65 +7,48 @@ from tensorflow.keras import layers, models
 x_train = x_train / 255.0
 x_test = x_test / 255.0
 
-# Reshape for CNN (batch, height, width, channels)
+# Reshape for CNN
 x_train = x_train.reshape(-1, 28, 28, 1)
 x_test = x_test.reshape(-1, 28, 28, 1)
 
-# Define a CNN model
 def create_model():
-    model = models.Sequential([
-        layers.Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Conv2D(64, (3, 3), activation='relu'),
-        layers.MaxPooling2D(pool_size=(2, 2)),
-        layers.Flatten(),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(10, activation='softmax')
-    ])
+    inputs = tf.keras.Input(shape=(28, 28, 1))
+    x = layers.Conv2D(32, kernel_size=(3, 3), activation='relu', name='conv2d_1')(inputs)
+    x = layers.MaxPooling2D(pool_size=(2, 2), name='maxpool_1')(x)
+    x = layers.Conv2D(64, (3, 3), activation='relu', name='conv2d_2')(x)
+    x = layers.MaxPooling2D(pool_size=(2, 2), name='maxpool_2')(x)
+    x = layers.Flatten(name='flatten')(x)
+    x = layers.Dense(64, activation='relu', name='dense_1')(x)
+    outputs = layers.Dense(10, activation='softmax', name='output')(x)
+    model = models.Model(inputs=inputs, outputs=outputs)
     model.compile(optimizer='adam',
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
     return model
 
 # Train model
+print("Training model...")
 model = create_model()
 model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
-model.save('guess.keras')
 
 # Evaluate model
 loss, accuracy = model.evaluate(x_test, y_test)
 print(f"Test loss: {loss:.4f}, Test accuracy: {accuracy:.4f}")
 
-# Reload model
-model = tf.keras.models.load_model('guess.keras')
+# Export to TensorFlow.js - save to Next.js public directory
+print("Exporting model to TensorFlow.js format...")
+tfjs.converters.save_keras_model(model, './neural-network-app/public/model')
 
-# Predict on custom images
-def preprocess_image(path):
-    img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        raise ValueError("Image not found or unreadable")
-    img = cv2.resize(img, (28, 28))
-    img = cv2.bitwise_not(img)  # invert: black bg, white digit
-    img = img / 255.0
-    img = img.reshape(1, 28, 28, 1)
-    return img
+# Save sample test data to public directory
+print("Saving sample test data...")
+# Convert numpy arrays to JSON for easier loading in browser
+test_sample = {
+    'images': x_test[:50].tolist(),  # Convert first 50 images to list
+    'labels': y_test[:50].tolist()   # Convert corresponding labels to list
+}
 
-def predict_custom_digits(folder="digits"):
-    image_number = 0
-    while os.path.isfile(f"{folder}/{image_number}.png"):
-        path = f"{folder}/{image_number}.png"
-        try:
-            img = preprocess_image(path)
-            prediction = model.predict(img, verbose=0)
-            predicted_label = np.argmax(prediction)
-            confidence = np.max(prediction)
-            print(f"{path}: {predicted_label} (confidence: {confidence:.2f})")
-            plt.imshow(img[0, :, :, 0], cmap=plt.cm.binary)
-            plt.title(f"Prediction: {predicted_label}")
-            plt.axis('off')
-            plt.show()
-        except Exception as e:
-            print(f"Error with {path}: {e}")
-        image_number += 1
+import json
+with open('./neural-network-app/public/test_data.json', 'w') as f:
+    json.dump(test_sample, f)
 
-predict_custom_digits()
+print("Export complete!")
